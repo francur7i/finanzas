@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { descripcionVisible } from "@/lib/descripcion";
 import { fechaCorta, pesos } from "@/lib/formato";
 
 type Mov = {
@@ -9,22 +10,11 @@ type Mov = {
   nota: string | null;
   tipo: string;
   operacion: string | null;
+  rubro: string | null;
   estado: string;
   categoriaId: number | null;
   categoria: { nombre: string; icono: string; tipo: string } | null;
 };
-
-/** Texto a mostrar cuando la fuente no trae descripción. */
-export function descripcionVisible(m: Pick<Mov, "descripcion" | "nota" | "tipo" | "operacion" | "montoCentavos">) {
-  if (m.nota) return m.nota;
-  if (m.descripcion && m.descripcion !== "Varios") return m.descripcion;
-  if (m.tipo === "PAYOUTS") return "Transferencia enviada";
-  if (m.operacion === "money_transfer") return m.montoCentavos < 0 ? "Transferencia a cuenta Mercado Pago" : "Transferencia recibida";
-  if (m.operacion === "rendimiento") return "Rendimiento diario";
-  if (m.operacion === "account_fund") return "Ingreso desde tu banco";
-  if (m.operacion === "investment") return "Movimiento a inversión";
-  return m.descripcion || "Pago";
-}
 
 export function ListaMovimientos({ movimientos, accion }: { movimientos: Mov[]; accion?: (m: Mov) => ReactNode }) {
   if (movimientos.length === 0) {

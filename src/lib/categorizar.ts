@@ -7,7 +7,8 @@ export type DatosMovimiento = {
   operacion: string | null;
   montoCentavos: number;
   fecha: Date;
-  texto: string; // descripción + datos del comercio, en minúsculas
+  destinatario?: string | null; // la otra cuenta de Mercado Pago
+  texto: string; // descripción + rubro + datos del comercio, en minúsculas
 };
 
 export type Resultado = {
@@ -45,6 +46,7 @@ function cumple(r: Regla, m: DatosMovimiento) {
   const abs = Math.abs(m.montoCentavos);
   const dia = m.fecha.getDate();
   if (r.descripcionContiene && !m.texto.includes(r.descripcionContiene)) return false;
+  if (r.destinatario && r.destinatario !== m.destinatario) return false;
   if (r.tipo && r.tipo !== m.tipo) return false;
   if (r.operacion && r.operacion !== m.operacion) return false;
   if (r.signo && r.signo !== signo) return false;
@@ -60,7 +62,7 @@ function cumple(r: Regla, m: DatosMovimiento) {
 }
 
 function especificidad(r: Regla) {
-  return [r.descripcionContiene, r.tipo, r.operacion, r.signo, r.montoMinCentavos, r.diaDesde].filter(
+  return [r.descripcionContiene, r.destinatario, r.tipo, r.operacion, r.signo, r.montoMinCentavos, r.diaDesde].filter(
     (v) => v != null,
   ).length;
 }
@@ -91,6 +93,8 @@ function datosDe(m: {
   montoCentavos: number;
   fecha: Date;
   descripcion: string | null;
+  rubro: string | null;
+  destinatario: string | null;
   crudo: string | null;
 }): DatosMovimiento {
   const f = m.crudo ? (JSON.parse(m.crudo) as Record<string, string>) : {};
@@ -99,7 +103,8 @@ function datosDe(m: {
     operacion: m.operacion,
     montoCentavos: m.montoCentavos,
     fecha: m.fecha,
-    texto: textoNormalizado(m.descripcion, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
+    destinatario: m.destinatario,
+    texto: textoNormalizado(m.descripcion, m.rubro, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
   };
 }
 
@@ -135,6 +140,18 @@ export async function confirmarCategoria(movimientoId: number, categoriaId: numb
 
   const signo = m.montoCentavos < 0 ? "sale" : "entra";
   const descripcion = textoNormalizado(m.descripcion);
+
+  if (m.destinatario) {
+    // Misma cuenta del otro lado (la misma persona o el mismo comercio): la señal más confiable.
+    const existente = await db.regla.findFirst({ where: { destinatario: m.destinatario, signo } });
+    if (existente) {
+      await db.regla.update({ where: { id: existente.id }, data: { categoriaId, origen: "aprendida" } });
+    } else {
+      await db.regla.create({ data: { categoriaId, destinatario: m.destinatario, signo, origen: "aprendida" } });
+    }
+    await recategorizarPendientes();
+    return;
+  }
 
   if (!esDescripcionGenerica(descripcion)) {
     // Hay un comercio identificable: la regla por texto es confiable, categoriza sola.

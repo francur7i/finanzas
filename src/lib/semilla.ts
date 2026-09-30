@@ -55,6 +55,23 @@ const REGLAS: ReglaSemilla[] = [
   ...["farmacia", "farmacity", "osde", "swiss medical", "galeno"].map(
     (d) => ({ categoria: "Salud" as const, descripcionContiene: d, signo: "sale" as const }),
   ),
+  // Rubros que informa Mercado Pago en el detalle del pago (en inglés, ej. "Transport - Tolls paygo").
+  ...(
+    [
+      ["tolls", "Transporte"],
+      ["transport", "Transporte"],
+      ["parking", "Transporte"],
+      ["fuel", "Transporte"],
+      ["supermarket", "Supermercado"],
+      ["grocer", "Supermercado"],
+      ["restaurant", "Comida y delivery"],
+      ["fast food", "Comida y delivery"],
+      ["pharmac", "Salud"],
+      ["utilities", "Servicios"],
+      ["telecom", "Servicios"],
+      ["entertainment", "Ocio"],
+    ] as const
+  ).map(([d, categoria]) => ({ categoria, descripcionContiene: d, signo: "sale" as const })),
 ];
 
 /**

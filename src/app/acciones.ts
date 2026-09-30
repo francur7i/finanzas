@@ -1,12 +1,10 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { db } from "@/lib/db";
-import { categorizar, confirmarCategoria, reglasOrdenadas, textoNormalizado } from "@/lib/categorizar";
-import { interpretarCarga, listarPendientes } from "@/lib/pendientes";
+import { confirmarCategoria } from "@/lib/categorizar";
+import { detalleMovimiento, listarPendientes } from "@/lib/pendientes";
 import { sincronizarMercadoPago } from "@/lib/sincronizar";
-import { pesos } from "@/lib/formato";
 
 export async function sincronizarAhora() {
   const r = await sincronizarMercadoPago();
@@ -14,7 +12,7 @@ export async function sincronizarAhora() {
   return r;
 }
 
-/** Respuesta a un pendiente del chat. Devuelve la lista actualizada (puede haber resuelto parecidos). */
+/** Respuesta con un botón a un pendiente. Devuelve la lista actualizada (puede haber resuelto parecidos). */
 export async function responderPendiente(movimientoId: number, categoriaId: number, nota?: string) {
   const antes = await db.movimiento.count({ where: { estado: "pendiente" } });
   await confirmarCategoria(movimientoId, categoriaId, nota?.trim() || undefined);
@@ -29,43 +27,12 @@ export async function cambiarCategoria(movimientoId: number, categoriaId: number
   revalidatePath("/", "layout");
 }
 
-/** Carga rápida desde el chat: "café 2500". */
-export async function cargarManual(texto: string) {
-  const carga = interpretarCarga(texto);
-  if (!carga) {
-    return { ok: false as const, mensaje: 'No encontré el monto. Probá así: "café 2500" o "+ cobré 30000".' };
-  }
-
-  const fecha = new Date();
-  const resultado = categorizar(
-    { tipo: "MANUAL", operacion: null, montoCentavos: carga.montoCentavos, fecha, texto: textoNormalizado(carga.descripcion) },
-    await reglasOrdenadas(),
-  );
-
-  const mov = await db.movimiento.create({
-    data: {
-      origen: "manual",
-      idExterno: randomUUID(),
-      fecha,
-      montoCentavos: carga.montoCentavos,
-      tipo: "MANUAL",
-      medio: "efectivo",
-      descripcion: carga.descripcion,
-      ...resultado,
-    },
-    include: { categoria: true },
-  });
-
+/** Después de que el asistente categoriza o anota algo, el chat vuelve a pedir los pendientes. */
+export async function pendientesActuales() {
   revalidatePath("/", "layout");
-  const resumen = `${carga.descripcion} · ${pesos(Math.abs(carga.montoCentavos))}`;
-  return {
-    ok: true as const,
-    auto: resultado.estado === "auto",
-    mensaje:
-      resultado.estado === "auto"
-        ? `Anotado: ${resumen} en ${mov.categoria?.icono} ${mov.categoria?.nombre}.`
-        : `Anotado: ${resumen}. ¿En qué categoría lo pongo?`,
-    pendientes: await listarPendientes(),
-    movimientoId: mov.id,
-  };
+  return listarPendientes();
+}
+
+export async function verDetalle(movimientoId: number) {
+  return detalleMovimiento(movimientoId);
 }

@@ -3,9 +3,11 @@ import { asegurarSemilla } from "@/lib/semilla";
 import { categorizar, recategorizarPendientes, reglasOrdenadas, textoNormalizado } from "@/lib/categorizar";
 import {
   asegurarConfiguracion,
+  contraparte,
   descargarReporte,
   detallePago,
   generarReporte,
+  miId,
   type FilaReporte,
 } from "@/lib/mercadopago";
 
@@ -43,6 +45,7 @@ export async function sincronizarMercadoPago(): Promise<ResultadoSync> {
     const { id, archivo } = await generarReporte(desde, hasta);
     const filas = await descargarReporte(archivo);
     const nuevas = await guardarFilas(filas);
+    await enriquecerFaltantes();
     await recategorizarPendientes();
 
     await db.sincronizacion.update({
@@ -60,8 +63,45 @@ export async function sincronizarMercadoPago(): Promise<ResultadoSync> {
   }
 }
 
+const TIPOS_CON_DETALLE = ["SETTLEMENT", "REFUND"];
+
+/**
+ * Completa rubro y contraparte de movimientos guardados antes de que existieran esos campos
+ * (o cuyo detalle falló). Corre en cada sincronización; lo ya enriquecido no se vuelve a pedir.
+ */
+async function enriquecerFaltantes() {
+  const yo = await miId();
+  const faltan = await db.movimiento.findMany({
+    where: {
+      origen: FUENTE,
+      enriquecido: false,
+      tipo: { in: TIPOS_CON_DETALLE },
+      NOT: { operacion: "rendimiento" },
+    },
+  });
+  for (const m of faltan) {
+    const sourceId = m.idExterno.split(":")[0];
+    const d = await detallePago(sourceId);
+    await db.movimiento.update({
+      where: { id: m.id },
+      data: {
+        enriquecido: true,
+        ...(d
+          ? {
+              rubro: d.rubro,
+              destinatario: contraparte(d, m.montoCentavos, yo),
+              descripcion: m.descripcion ?? (d.description?.trim() || null),
+            }
+          : {}),
+      },
+    });
+  }
+  return faltan.length;
+}
+
 async function guardarFilas(filas: FilaReporte[]) {
   const reglas = await reglasOrdenadas();
+  const yo = await miId();
   let nuevas = 0;
 
   for (const f of filas) {
@@ -79,13 +119,16 @@ async function guardarFilas(filas: FilaReporte[]) {
     if (existe) continue;
 
     // El reporte no trae el comercio; el detalle del pago sí (solo existe para pagos, no para transferencias).
-    const detalle = ["SETTLEMENT", "REFUND"].includes(f.TRANSACTION_TYPE) ? await detallePago(f.SOURCE_ID) : null;
+    const conDetalle = TIPOS_CON_DETALLE.includes(f.TRANSACTION_TYPE);
+    const detalle = conDetalle ? await detallePago(f.SOURCE_ID) : null;
 
     // Ingresos sin medio de pago ni detalle: son los rendimientos diarios de la plata en cuenta.
     const esRendimiento = f.TRANSACTION_TYPE === "SETTLEMENT" && monto > 0 && !f.PAYMENT_METHOD_TYPE && !detalle;
     const operacion = esRendimiento ? "rendimiento" : (detalle?.operation_type ?? null);
     const descripcion = (detalle?.description || f.DESCRIPTION || "").trim() || null;
     const fecha = new Date(f.TRANSACTION_DATE);
+    const rubro = detalle?.rubro ?? null;
+    const destinatario = detalle ? contraparte(detalle, montoCentavos, yo) : null;
 
     const resultado = categorizar(
       {
@@ -93,7 +136,8 @@ async function guardarFilas(filas: FilaReporte[]) {
         operacion,
         montoCentavos,
         fecha,
-        texto: textoNormalizado(descripcion, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
+        destinatario,
+        texto: textoNormalizado(descripcion, rubro, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
       },
       reglas,
     );
@@ -109,6 +153,10 @@ async function guardarFilas(filas: FilaReporte[]) {
         operacion,
         medio: f.PAYMENT_METHOD_TYPE || detalle?.payment_method_id || null,
         descripcion,
+        rubro,
+        destinatario,
+        // Rendimientos y transferencias salientes no tienen detalle: no hay nada que completar después.
+        enriquecido: !conDetalle || esRendimiento || detalle !== null,
         estado: resultado.estado,
         categoriaId: resultado.categoriaId,
         reglaId: resultado.reglaId,

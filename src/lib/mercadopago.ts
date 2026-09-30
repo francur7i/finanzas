@@ -32,6 +32,9 @@ export type DetallePago = {
   description: string | null;
   operation_type: string | null;
   payment_method_id: string | null;
+  rubro: string | null; // point_of_interaction.business_info.branch, ej. "Transport - Tolls paygo"
+  cobradorId: string | null; // quien recibió la plata
+  pagadorId: string | null; // quien la mandó
 };
 
 function token() {
@@ -122,11 +125,29 @@ export async function detallePago(id: string): Promise<DetallePago | null> {
   const res = await llamar(`/v1/payments/${id}`);
   if (!res.ok) return null; // transferencias salientes y rendimientos no son "payments": 404
   const p = await res.json();
+  const texto = (v: unknown) => (v == null ? null : String(v));
   return {
     description: p.description ?? null,
     operation_type: p.operation_type ?? null,
     payment_method_id: p.payment_method_id ?? null,
+    rubro: p.point_of_interaction?.business_info?.branch ?? null,
+    cobradorId: texto(p.collector?.id ?? p.collector_id),
+    pagadorId: texto(p.payer?.id),
   };
+}
+
+let miIdCache: string | null = null;
+
+/** Id de la cuenta dueña del token, para distinguir "la otra parte" de un pago. */
+export async function miId() {
+  miIdCache ??= String((await llamarJson<{ id: number }>("/users/me")).id);
+  return miIdCache;
+}
+
+/** La otra cuenta del movimiento: a quién le pagué, o quién me pagó. Null si soy yo mismo. */
+export function contraparte(d: DetallePago, montoCentavos: number, yo: string) {
+  const otro = montoCentavos < 0 ? d.cobradorId : d.pagadorId;
+  return otro && otro !== yo ? otro : null;
 }
 
 export function parsearCsv(texto: string): FilaReporte[] {

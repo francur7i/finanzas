@@ -20,6 +20,9 @@ model Movimiento {
   operacion     String? // regular_payment, money_transfer, account_fund...
   medio         String? // available_money, bank_transfer, cvu...
   descripcion   String? // lo que informa la fuente (ej. "Apple.com/bill")
+  rubro         String? // rubro del comercio según MP (ej. "Transport - Tolls paygo")
+  destinatario  String? // id de la cuenta MP que recibió la plata: identifica a la misma persona o comercio
+  enriquecido   Boolean    @default(false) // ya se consultó el detalle del pago
   nota          String? // lo que escribe el usuario
   estado        String     @default("pendiente") // "pendiente" | "auto" | "confirmado"
   categoriaId   Int?
@@ -51,6 +54,7 @@ model Regla {
   categoriaId         Int
   categoria           Categoria    @relation(fields: [categoriaId], references: [id])
   descripcionContiene String?
+  destinatario        String? // misma cuenta de destino
   tipo                String?
   operacion           String?
   signo               String? // "entra" | "sale"
