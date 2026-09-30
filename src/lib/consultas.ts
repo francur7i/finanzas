@@ -1,6 +1,6 @@
 import { connection } from "next/server";
 import { db } from "@/lib/db";
-import { rangoMes } from "@/lib/formato";
+import { mesVecino, rangoMes } from "@/lib/formato";
 
 export const SIN_CATEGORIA = "Sin categorizar";
 
@@ -58,6 +58,21 @@ export async function resumenMes(mes: string) {
     cantidad: movs.length,
     categorias: [...porCategoria.values()].sort((a, b) => b.centavos - a.centavos),
   };
+}
+
+export type PuntoMensual = { mes: string; ingresos: number; gastos: number; balance: number; desdeMisCuentas: number };
+
+/** Totales de los `cantidad` meses que terminan en `mesFinal` (el más viejo primero). */
+export async function serieMensual(mesFinal: string, cantidad = 6): Promise<PuntoMensual[]> {
+  const meses = Array.from({ length: cantidad }, (_, i) => mesVecino(mesFinal, i - cantidad + 1));
+  const resumenes = await Promise.all(meses.map((m) => resumenMes(m)));
+  return resumenes.map((r, i) => ({
+    mes: meses[i],
+    ingresos: r.ingresos,
+    gastos: r.gastos,
+    balance: r.balance,
+    desdeMisCuentas: r.desdeMisCuentas,
+  }));
 }
 
 export type FiltrosMovimientos = { mes: string; categoria?: string; estado?: string };

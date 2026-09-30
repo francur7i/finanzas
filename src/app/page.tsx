@@ -2,17 +2,19 @@ import Link from "next/link";
 import { DonaGastos } from "@/components/DonaGastos";
 import { ListaMovimientos } from "@/components/ListaMovimientos";
 import { SelectorMes } from "@/components/SelectorMes";
-import { contarPendientes, listarMovimientos, mesImportado, resumenMes } from "@/lib/consultas";
-import { mesActual, mesValido, nombreMes, pesos } from "@/lib/formato";
+import { TotalesMes } from "@/components/TotalesMes";
+import { contarPendientes, listarMovimientos, mesImportado, resumenMes, serieMensual } from "@/lib/consultas";
+import { mesActual, mesValido, nombreMes } from "@/lib/formato";
 
 export default async function Resumen({ searchParams }: PageProps<"/">) {
   const { mes: mesParam } = await searchParams;
   const mes = mesValido(typeof mesParam === "string" ? mesParam : undefined);
-  const [r, movimientos, importado, pendientesTotales] = await Promise.all([
+  const [r, movimientos, importado, pendientesTotales, serie] = await Promise.all([
     resumenMes(mes),
     listarMovimientos({ mes }),
     mesImportado(mes),
     contarPendientes(),
+    serieMensual(mes, 6),
   ]);
   // Solo tiene sentido para meses cerrados: Mercado Pago genera el resumen cuando termina el mes.
   const sugerirImportar = mes < mesActual() && !importado;
@@ -33,33 +35,7 @@ export default async function Resumen({ searchParams }: PageProps<"/">) {
         </Link>
       )}
 
-      <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Totales del mes">
-        <Tile
-          titulo="Ingresos"
-          valor={pesos(r.ingresos)}
-          tono="text-positivo"
-          detalle={r.desdeMisCuentas > 0 ? `+ ${pesos(r.desdeMisCuentas)} desde tu banco` : undefined}
-        />
-        <Tile titulo="Gastos" valor={pesos(r.gastos)} />
-        <Tile
-          titulo="Balance"
-          valor={pesos(r.balance)}
-          tono={r.balance >= 0 ? "text-positivo" : "text-negativo"}
-          detalle="entró menos salió"
-        />
-        <Tile
-          titulo="Para revisar este mes"
-          valor={String(r.pendientes)}
-          detalle={
-            r.pendientes > 0
-              ? "sin confirmar"
-              : pendientesTotales > 0
-                ? `${pendientesTotales} en otros meses`
-                : "todo al día"
-          }
-          href={r.pendientes > 0 || pendientesTotales > 0 ? "/chat" : undefined}
-        />
-      </section>
+      <TotalesMes serie={serie} mes={mes} pendientes={r.pendientes} pendientesTotales={pendientesTotales} />
 
       <section className="tarjeta p-6">
         <h2 className="mb-5 text-[20px] font-semibold tracking-tight">Gastos por categoría</h2>
@@ -76,35 +52,5 @@ export default async function Resumen({ searchParams }: PageProps<"/">) {
         <ListaMovimientos movimientos={movimientos.slice(0, 8)} />
       </section>
     </div>
-  );
-}
-
-function Tile({
-  titulo,
-  valor,
-  detalle,
-  tono = "text-tinta",
-  href,
-}: {
-  titulo: string;
-  valor: string;
-  detalle?: string;
-  tono?: string;
-  href?: string;
-}) {
-  const contenido = (
-    <>
-      <span className="text-[13px] font-medium text-tinta-3">{titulo}</span>
-      <span className={`cifras truncate text-[22px] font-semibold tracking-tight sm:text-[26px] ${tono}`}>{valor}</span>
-      {detalle && <span className="truncate text-xs text-tinta-3">{detalle}</span>}
-    </>
-  );
-  const clase = "tarjeta flex min-w-0 flex-col gap-1 p-4 sm:p-5";
-  return href ? (
-    <Link href={href} className={`${clase} transition-all duration-200 hover:-translate-y-0.5 hover:shadow-alta`}>
-      {contenido}
-    </Link>
-  ) : (
-    <div className={clase}>{contenido}</div>
   );
 }
