@@ -92,7 +92,7 @@ export function Chat({
       const r = await responderPendiente(actual.id, cat.id, textoNota);
       setPendientes(r.pendientes);
       setAviso(
-        `${cat.icono} ${cat.nombre}: anotado.` +
+        `${cat.nombre}: anotado.` +
           (r.resueltosDeRebote > 0 ? ` Resolví ${r.resueltosDeRebote} parecido${r.resueltosDeRebote === 1 ? "" : "s"}.` : ""),
       );
     });
@@ -145,14 +145,14 @@ export function Chat({
             <div className="flex flex-wrap gap-1.5">
               {sugerida && (
                 <Chip onClick={() => responder(sugerida)} disabled={guardando} destacado>
-                  Sí, {sugerida.icono} {sugerida.nombre}
+                  Sí, {sugerida.nombre}
                 </Chip>
               )}
               {opciones
                 .filter((c) => c.id !== sugerida?.id)
                 .map((c) => (
                   <Chip key={c.id} onClick={() => responder(c)} disabled={guardando}>
-                    {c.icono} {c.nombre}
+                    {c.nombre}
                   </Chip>
                 ))}
             </div>

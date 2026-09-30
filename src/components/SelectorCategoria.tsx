@@ -41,7 +41,7 @@ export function SelectorCategoria({
             .filter((c) => c.tipo === tipo)
             .map((c) => (
               <option key={c.id} value={c.id}>
-                {c.icono} {c.nombre}
+                {c.nombre}
               </option>
             ))}
         </optgroup>

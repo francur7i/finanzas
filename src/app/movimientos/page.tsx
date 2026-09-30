@@ -34,7 +34,7 @@ export default async function Movimientos({ searchParams }: PageProps<"/movimien
           <option value="sin">Sin categorizar</option>
           {categorias.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.icono} {c.nombre}
+              {c.nombre}
             </option>
           ))}
         </select>

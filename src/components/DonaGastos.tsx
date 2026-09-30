@@ -105,7 +105,7 @@ export function DonaGastos({ filas, total, mes }: { filas: Fila[]; total: number
               >
                 <span className="h-3 w-3 rounded-full" style={{ background: COLOR_POR_CATEGORIA[f.nombre] ?? OTRAS }} aria-hidden />
                 <span className="truncate text-sm">
-                  {f.icono} {f.nombre}
+                  {f.nombre}
                   <span className="ml-1.5 text-xs text-tinta-3">
                     {f.cantidad} mov.
                   </span>

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { IconoCategoria } from "@/components/IconoCategoria";
 import { descripcionVisible } from "@/lib/descripcion";
 import { fechaCorta, pesos } from "@/lib/formato";
 
@@ -29,11 +30,8 @@ export function ListaMovimientos({ movimientos, accion }: { movimientos: Mov[]; 
         const color = neutro ? "text-tinta-3" : m.montoCentavos >= 0 ? "text-positivo" : "text-tinta";
         return (
           <li key={m.id} className="flex items-center gap-3 py-2.5 [&+li]:border-t [&+li]:border-borde">
-            <span
-              className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-superficie-2 text-lg"
-              aria-hidden
-            >
-              {m.categoria?.icono ?? "?"}
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-superficie-2 text-tinta-2" aria-hidden>
+              <IconoCategoria nombre={m.categoria?.nombre} />
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
               <span className="truncate text-[15px]">{descripcionVisible(m)}</span>
