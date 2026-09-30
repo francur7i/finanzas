@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+// SQLite en local. Para la nube se cambia el provider a "postgresql" y el adapter en src/lib/db.ts.
+datasource db {
+  provider = "sqlite"
+}
+
+// Montos siempre en centavos (Int) para no depender del tipo decimal de cada motor.
+model Movimiento {
+  id            Int        @id @default(autoincrement())
+  origen        String // "mercadopago" | "manual"
+  idExterno     String // en Mercado Pago: SOURCE_ID + tipo de transacción
+  fecha         DateTime
+  montoCentavos Int // negativo = sale plata, positivo = entra
+  moneda        String     @default("ARS")
+  tipo          String // SETTLEMENT, PAYOUTS, REFUND... o "MANUAL"
+  operacion     String? // regular_payment, money_transfer, account_fund...
+  medio         String? // available_money, bank_transfer, cvu...
+  descripcion   String? // lo que informa la fuente (ej. "Apple.com/bill")
+  nota          String? // lo que escribe el usuario
+  estado        String     @default("pendiente") // "pendiente" | "auto" | "confirmado"
+  categoriaId   Int?
+  categoria     Categoria? @relation(fields: [categoriaId], references: [id])
+  reglaId       Int?
+  regla         Regla?     @relation(fields: [reglaId], references: [id])
+  crudo         String? // fila original en JSON, para reprocesar sin volver a pedirla
+  creadoEn      DateTime   @default(now())
+  actualizadoEn DateTime   @updatedAt
+
+  @@unique([origen, idExterno])
+  @@index([fecha])
+  @@index([estado])
+}
+
+model Categoria {
+  id          Int          @id @default(autoincrement())
+  nombre      String       @unique
+  tipo        String // "gasto" | "ingreso" | "neutro" (movimientos entre cuentas propias)
+  color       String       @default("#64748b")
+  icono       String       @default("•")
+  movimientos Movimiento[]
+  reglas      Regla[]
+}
+
+// Una regla asigna categoría a los movimientos que cumplen TODAS sus condiciones no nulas.
+model Regla {
+  id                  Int          @id @default(autoincrement())
+  categoriaId         Int
+  categoria           Categoria    @relation(fields: [categoriaId], references: [id])
+  descripcionContiene String?
+  tipo                String?
+  operacion           String?
+  signo               String? // "entra" | "sale"
+  montoMinCentavos    Int?
+  montoMaxCentavos    Int?
+  diaDesde            Int? // día del mes, para pagos recurrentes
+  diaHasta            Int?
+  requiereConfirmar   Boolean      @default(false) // aprendida por parecido: categoriza pero pregunta igual
+  prioridad           Int          @default(0)
+  origen              String       @default("sistema") // "sistema" | "aprendida" | "usuario"
+  usos                Int          @default(0)
+  movimientos         Movimiento[]
+  creadaEn            DateTime     @default(now())
+}
+
+model Sincronizacion {
+  id          Int       @id @default(autoincrement())
+  fuente      String
+  desde       DateTime
+  hasta       DateTime
+  estado      String // "ok" | "error" | "en_curso"
+  filas       Int       @default(0)
+  nuevas      Int       @default(0)
+  error       String?
+  reporteId   String?
+  iniciadaEn  DateTime  @default(now())
+  terminadaEn DateTime?
+}
