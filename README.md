@@ -105,6 +105,21 @@ npm rebuild better-sqlite3
 
 Sincronizar a mano: `POST http://localhost:3000/api/sync`.
 
+## Panel web
+
+| Página | Qué muestra |
+|---|---|
+| `/` Resumen | Selector de mes, ingresos (y lo que pasaste desde tu banco), gastos, balance, pendientes; gastos por categoría en barras; últimos movimientos |
+| `/movimientos` | Lista del mes con filtros por categoría y estado (la URL se puede compartir); cambiar la categoría de cualquier movimiento enseña una regla |
+| `/chat` | Pregunta los pendientes de a uno con botones de categoría y nota opcional; carga de efectivo escribiendo `café 2500` o `+ cobré 30000` |
+
+Criterios del resumen:
+- **Gastos** incluye lo *sin categorizar* (transferencias pendientes): los totales son reales aunque falte revisar.
+- La categoría **Entre mis cuentas** (tipo `neutro`) no es ingreso ni gasto. Lo que entra desde el banco propio
+  (ahí llega el sueldo) se muestra aparte y sí cuenta para el **balance** (= lo que entró menos lo que salió).
+- Gráfico: barras horizontales de un solo tono ordenadas por monto, con monto y % escritos (el color no es la única
+  forma de leerlas). Colores por rol en `globals.css`, con modo oscuro propio.
+
 ## Estructura
 
 ```
@@ -113,8 +128,17 @@ prisma/
   migrations/
 src/
   instrumentation.ts     Arranca el programador cuando levanta el servidor
-  app/api/sync/route.ts  POST: sincroniza ahora
+  app/
+    page.tsx             Resumen
+    movimientos/         Lista con filtros
+    chat/                Chat de pendientes
+    acciones.ts          Server actions: sincronizar, responder pendiente, cambiar categoría, carga manual
+    api/sync/route.ts    POST: sincroniza ahora
+  components/            Navegación, gráfico de categorías, lista, chat, selectores
   lib/
+    consultas.ts         Lecturas para las páginas (resumen del mes, listas)
+    pendientes.ts        Pendientes serializables y parser de "café 2500"
+    formato.ts           Pesos, fechas y meses en hora argentina
     db.ts                Cliente Prisma (una instancia por proceso)
     mercadopago.ts       Cliente de la API: config, generar/descargar reporte, detalle de pago
     sincronizar.ts       Trae, deduplica, enriquece y categoriza
@@ -131,8 +155,8 @@ Montos en **centavos** (`Int`), negativos = sale plata. Clave única de un movim
 - [x] Conexión con Mercado Pago y reporte automático
 - [x] Base de datos, reglas de fábrica y aprendizaje
 - [x] Sincronización periódica
-- [ ] Panel web (resumen del mes, gastos por categoría, movimientos)
-- [ ] Chat de pendientes y carga rápida ("café 2500")
+- [x] Panel web: resumen del mes, gastos por categoría, movimientos con filtros y cambio de categoría
+- [x] Chat de pendientes (con sugerencia por parecido) y carga rápida ("café 2500")
 - [ ] Preguntas en lenguaje natural con IA
 - [ ] App instalable en el celular (PWA) con notificaciones
 - [ ] Login y despliegue en la nube (Postgres)
