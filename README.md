@@ -302,16 +302,15 @@ Montos en **centavos** (`Int`), negativos = sale plata. Clave única de un movim
 
 ## Estado del proyecto
 
-Al **30/09/2026** (tarde):
+Al **30/09/2026** (cierre del día):
 
-- 194 movimientos de los últimos 90 días: **175 categorizados solos, 19 pendientes** (comercios nuevos y
-  transferencias recibidas). Las transferencias salientes van todas a "Transferencias".
-- El chat con IA (Groq, `openai/gpt-oss-120b`) funciona. Probado: "¿cuánto gasté en transporte y qué es el pago
-  de 1192,99?" ($ 23.241,23; son peajes) y "¿cuánto gasté en peaje en septiembre?" ($ 10.339,23). Ambos coinciden
-  con la base.
-- Importador del resumen de cuenta: hecho y compilando. Se validó el cruce con el CSV real de agosto (54/54),
-  **falta probar la subida desde la página** (requiere reiniciar `npm run dev` por el cambio de base).
-- Todavía **no se probó** desde la página contestar pendientes ni anotar efectivo con el asistente.
+- 194 movimientos de julio a septiembre; la gran mayoría se categoriza sola. Las transferencias salientes van a
+  "Transferencias" y son ~90 % del gasto: categorizarlas por persona (con los nombres del resumen) es lo que más suma.
+- Resúmenes de cuenta de agosto y septiembre importados desde la página: las transferencias muestran el nombre.
+- Chat con IA (Groq, `openai/gpt-oss-120b`) probado: totales por texto ("peaje"), detalle de un pago, apodos
+  ("EBANX es Uber" → 4 movimientos). Se detectó que el modelo afirmó "listo" con herramientas fallidas; se agregó
+  una regla en las instrucciones.
+- Ya no hace falta reiniciar `npm run dev` después de cambiar el schema (ver `src/lib/db.ts`).
 
 Hecho:
 - [x] Conexión con Mercado Pago y reporte automático
@@ -331,6 +330,7 @@ Pendiente:
 - [ ] Ideas para sumar valor (a elegir): presupuestos por categoría, comparación con meses anteriores, ajuste por
       inflación (IPC), detector de suscripciones y aumentos, proyección de fin de mes, a quién se le transfiere más,
       resumen mensual escrito por la IA, importar resúmenes de otros bancos y tarjetas
-- [ ] Probar el chat de punta a punta desde la página
+- [x] Apodos enseñados por chat
+- [ ] Revisar el cálculo de ingresos/balance (el usuario lo ve raro; pendiente de su análisis)
 - [ ] App instalable en el celular (PWA) con notificaciones
 - [ ] Login y despliegue en la nube (Postgres), con cuentas personales
