@@ -9,6 +9,7 @@ export type Pendiente = {
   tipo: string;
   operacion: string | null;
   descripcion: string | null;
+  contraparte: string | null;
   sugerida: { id: number; nombre: string; icono: string } | null;
 };
 
@@ -25,6 +26,7 @@ export async function listarPendientes(): Promise<Pendiente[]> {
     tipo: m.tipo,
     operacion: m.operacion,
     descripcion: m.descripcion,
+    contraparte: m.contraparte,
     sugerida: m.categoria ? { id: m.categoria.id, nombre: m.categoria.nombre, icono: m.categoria.icono } : null,
   }));
 }
@@ -82,6 +84,9 @@ export async function detalleMovimiento(id: number): Promise<string[]> {
     minute: "2-digit",
   }).format(m.fecha);
   lineas.push(`Fue el ${cuando}.`);
+  if (m.contraparte) {
+    lineas.push(`Según el resumen de cuenta, ${m.montoCentavos < 0 ? "fue a" : "vino de"} ${m.contraparte}.`);
+  }
   if (m.descripcion && !["Varios", "VAR"].includes(m.descripcion)) lineas.push(`Mercado Pago lo describe como "${m.descripcion}".`);
   if (m.rubro) {
     const rubro = rubroEnCastellano(m.rubro);
@@ -96,8 +101,8 @@ export async function detalleMovimiento(id: number): Promise<string[]> {
         ? `Fue a una cuenta a la que le mandaste plata ${otros} vez${otros === 1 ? "" : "es"} más. Si la categorizás, la próxima la reconozco sola.`
         : "Es la primera vez que le mandás plata a esa cuenta.",
     );
-  } else if (m.tipo === "PAYOUTS") {
-    lineas.push("Fue a una cuenta de otro banco: Mercado Pago no informa a quién.");
+  } else if (m.tipo === "PAYOUTS" && !m.contraparte) {
+    lineas.push("Fue a una cuenta de otro banco: la API no informa a quién. Importá el resumen de cuenta del mes para ver el nombre.");
   }
 
   // Mismo monto (±1 %) en los últimos 90 días: suele ser una suscripción o un débito automático.

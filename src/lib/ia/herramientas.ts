@@ -101,7 +101,15 @@ export const herramientas = {
       const buscado = texto ? textoNormalizado(texto) : null;
       const coinciden = buscado
         ? filas.filter((m) =>
-            textoNormalizado(descripcionVisible(m), m.descripcion, m.rubro, rubroEnCastellano(m.rubro), m.nota, m.categoria?.nombre).includes(buscado),
+            textoNormalizado(
+              descripcionVisible(m),
+              m.descripcion,
+              m.contraparte,
+              m.rubro,
+              rubroEnCastellano(m.rubro),
+              m.nota,
+              m.categoria?.nombre,
+            ).includes(buscado),
           )
         : filas;
 

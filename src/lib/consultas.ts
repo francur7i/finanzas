@@ -91,6 +91,17 @@ export async function contarPendientes() {
   return db.movimiento.count({ where: { estado: "pendiente" } });
 }
 
+/** Si ya se importó un resumen de cuenta que cubre (casi) todo el mes. */
+export async function mesImportado(mes: string) {
+  await connection();
+  const { desde, hasta } = rangoMes(mes);
+  const DIA = 24 * 60 * 60 * 1000;
+  const i = await db.importacion.findFirst({
+    where: { desde: { lte: new Date(desde.getTime() + 2 * DIA) }, hasta: { gte: new Date(hasta.getTime() - 3 * DIA) } },
+  });
+  return i !== null;
+}
+
 export async function ultimaSincronizacion() {
   await connection();
   return db.sincronizacion.findFirst({ orderBy: { iniciadaEn: "desc" } });

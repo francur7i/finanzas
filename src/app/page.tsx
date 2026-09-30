@@ -2,17 +2,32 @@ import Link from "next/link";
 import { GastosPorCategoria } from "@/components/GastosPorCategoria";
 import { ListaMovimientos } from "@/components/ListaMovimientos";
 import { SelectorMes } from "@/components/SelectorMes";
-import { listarMovimientos, resumenMes } from "@/lib/consultas";
-import { mesValido, pesos } from "@/lib/formato";
+import { listarMovimientos, mesImportado, resumenMes } from "@/lib/consultas";
+import { mesActual, mesValido, nombreMes, pesos } from "@/lib/formato";
 
 export default async function Resumen({ searchParams }: PageProps<"/">) {
   const { mes: mesParam } = await searchParams;
   const mes = mesValido(typeof mesParam === "string" ? mesParam : undefined);
-  const [r, movimientos] = await Promise.all([resumenMes(mes), listarMovimientos({ mes })]);
+  const [r, movimientos, importado] = await Promise.all([resumenMes(mes), listarMovimientos({ mes }), mesImportado(mes)]);
+  // Solo tiene sentido para meses cerrados: Mercado Pago genera el resumen cuando termina el mes.
+  const sugerirImportar = mes < mesActual() && !importado;
 
   return (
     <div className="flex flex-col gap-6">
       <SelectorMes mes={mes} ruta="/" />
+
+      {sugerirImportar && (
+        <Link
+          href="/importar"
+          className="-mt-2 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-borde bg-superficie px-4 py-3 text-sm hover:border-acento"
+        >
+          <span className="text-tinta-2">
+            Todavía no importaste el resumen de cuenta de {nombreMes(mes).toLowerCase()}: sin él, las transferencias no muestran a
+            quién fueron.
+          </span>
+          <span className="font-medium text-acento">Importar resumen →</span>
+        </Link>
+      )}
 
       <section className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-label="Totales del mes">
         <Tile

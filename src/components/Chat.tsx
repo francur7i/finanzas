@@ -26,6 +26,13 @@ function pregunta(p: Pendiente) {
   const desc = p.descripcion && !["Varios", "VAR"].includes(p.descripcion) ? p.descripcion : null;
 
   if (p.tipo === "MANUAL") return `Anotaste "${desc}" por ${monto}.`;
+  if (p.contraparte) {
+    const esTransferencia = p.tipo === "PAYOUTS" || p.operacion === "money_transfer";
+    if (esTransferencia) {
+      return sale ? `El ${fecha} le transferiste ${monto} a ${p.contraparte}.` : `El ${fecha} ${p.contraparte} te transfirió ${monto}.`;
+    }
+    return sale ? `El ${fecha} pagaste ${monto} en ${p.contraparte}.` : `El ${fecha} ${p.contraparte} te pagó ${monto}.`;
+  }
   if (p.tipo === "PAYOUTS") return `El ${fecha} transferiste ${monto} a otro banco.`;
   if (p.operacion === "money_transfer") {
     return sale

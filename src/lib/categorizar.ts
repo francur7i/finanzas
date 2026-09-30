@@ -95,6 +95,7 @@ function datosDe(m: {
   descripcion: string | null;
   rubro: string | null;
   destinatario: string | null;
+  contraparte: string | null;
   crudo: string | null;
 }): DatosMovimiento {
   const f = m.crudo ? (JSON.parse(m.crudo) as Record<string, string>) : {};
@@ -104,26 +105,36 @@ function datosDe(m: {
     montoCentavos: m.montoCentavos,
     fecha: m.fecha,
     destinatario: m.destinatario,
-    texto: textoNormalizado(m.descripcion, m.rubro, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
+    texto: textoNormalizado(m.descripcion, m.contraparte, m.rubro, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
   };
 }
 
 /**
- * Vuelve a pasar las reglas sobre los pendientes. Así una regla nueva (de fábrica o aprendida)
- * resuelve también lo que ya estaba esperando, no solo lo que entre después.
- * Devuelve cuántos dejaron de estar pendientes.
+ * Vuelve a pasar las reglas sobre todo lo que el usuario no confirmó a mano (pendientes y
+ * categorizados solos). Así una regla nueva resuelve también lo que ya estaba, no solo lo que
+ * entre después: ej. "Pedro = Alquiler" saca de "Transferencias" todas las de Pedro.
+ * Devuelve cuántos cambiaron.
  */
-export async function recategorizarPendientes() {
+export async function recategorizar() {
   const reglas = await reglasOrdenadas();
-  const pendientes = await db.movimiento.findMany({ where: { estado: "pendiente" } });
-  let resueltos = 0;
-  for (const m of pendientes) {
+  const movimientos = await db.movimiento.findMany({ where: { estado: { not: "confirmado" } } });
+  let cambiados = 0;
+  for (const m of movimientos) {
     const r = categorizar(datosDe(m), reglas);
-    if (r.categoriaId === m.categoriaId && r.estado === m.estado) continue;
+    if (r.categoriaId === m.categoriaId && r.estado === m.estado && r.reglaId === m.reglaId) continue;
     await db.movimiento.update({ where: { id: m.id }, data: r });
-    if (r.estado === "auto") resueltos++;
+    cambiados++;
   }
-  return resueltos;
+  return cambiados;
+}
+
+async function aprenderPorTexto(texto: string, signo: string, categoriaId: number) {
+  const existente = await db.regla.findFirst({ where: { descripcionContiene: texto, signo } });
+  if (existente) {
+    await db.regla.update({ where: { id: existente.id }, data: { categoriaId, origen: "aprendida" } });
+  } else {
+    await db.regla.create({ data: { categoriaId, descripcionContiene: texto, signo, origen: "aprendida" } });
+  }
 }
 
 /**
@@ -149,21 +160,22 @@ export async function confirmarCategoria(movimientoId: number, categoriaId: numb
     } else {
       await db.regla.create({ data: { categoriaId, destinatario: m.destinatario, signo, origen: "aprendida" } });
     }
-    await recategorizarPendientes();
+    await recategorizar();
+    return;
+  }
+
+  const contraparte = textoNormalizado(m.contraparte);
+  if (contraparte) {
+    // Nombre de la otra parte (sale del resumen de cuenta): típico de transferencias a otros bancos.
+    await aprenderPorTexto(contraparte, signo, categoriaId);
+    await recategorizar();
     return;
   }
 
   if (!esDescripcionGenerica(descripcion)) {
     // Hay un comercio identificable: la regla por texto es confiable, categoriza sola.
-    const existente = await db.regla.findFirst({ where: { descripcionContiene: descripcion, signo } });
-    if (existente) {
-      await db.regla.update({ where: { id: existente.id }, data: { categoriaId, origen: "aprendida" } });
-    } else {
-      await db.regla.create({
-        data: { categoriaId, descripcionContiene: descripcion, signo, origen: "aprendida" },
-      });
-    }
-    await recategorizarPendientes();
+    await aprenderPorTexto(descripcion, signo, categoriaId);
+    await recategorizar();
     return;
   }
 
@@ -186,5 +198,5 @@ export async function confirmarCategoria(movimientoId: number, categoriaId: numb
       origen: "aprendida",
     },
   });
-  await recategorizarPendientes();
+  await recategorizar();
 }

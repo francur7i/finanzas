@@ -55,14 +55,18 @@ Mercado Pago ──(reporte "Todas las transacciones", cada 6 h)──▶ Sincro
 3. **Categorización** (`src/lib/categorizar.ts`): reglas con condiciones (texto/rubro, cuenta del otro
    lado, tipo, operación, signo, rango de monto, rango de días del mes). Gana la regla más prioritaria:
    primero las del usuario, después las aprendidas y por último las de fábrica (`src/lib/semilla.ts`).
-4. **Aprendizaje**: al confirmar la categoría de un pendiente, en este orden:
+4. **Aprendizaje**: al confirmar la categoría de un movimiento, en este orden:
    - si se conoce la **cuenta del otro lado** → regla por cuenta (la próxima vez que le pagues a esa
      persona o comercio, se categoriza solo);
+   - si tiene el **nombre** de la otra parte (del [resumen de cuenta](#resumen-de-cuenta-mensual-nombres-de-las-transferencias)) → regla por nombre;
    - si tiene un **comercio identificable** → regla por texto;
    - si no (transferencias a otros bancos) → regla por **monto parecido (±15 %) y día del mes (±3)** que
      *sugiere* la categoría pero pide confirmar.
 
-   Después de aprender, vuelve a pasar las reglas por todos los pendientes: contestar uno puede resolver varios.
+   Después de aprender, vuelve a pasar las reglas por todo lo que no confirmaste a mano (pendientes y
+   categorizados solos): contestar uno puede resolver varios.
+5. **Transferencias salientes** (a Mercado Pago o a otro banco, da igual) van solas a la categoría
+   **Transferencias**. Si le aclarás al chat qué fue una (*"fue el alquiler"*), esa regla gana.
 
 ### Qué da y qué no da la API de Mercado Pago
 
@@ -73,12 +77,56 @@ Mercado Pago ──(reporte "Todas las transacciones", cada 6 h)──▶ Sincro
 | Ingresos desde un banco propio | `SETTLEMENT` + `account_fund` | Sí |
 | Rendimientos diarios | `SETTLEMENT` positivo sin medio de pago | Se deduce (sin detalle) |
 | Devoluciones y reclamos | `REFUND`, `DISPUTE` | Sí |
-| **Transferencias a otros bancos** | `PAYOUTS` | **No**: la API no informa el destinatario |
+| **Transferencias a otros bancos** | `PAYOUTS` | **No** por API. El nombre sale del [resumen de cuenta](#resumen-de-cuenta-mensual-nombres-de-las-transferencias) |
 
 Probado y descartado: `/v1/payouts/{id}` y `/mercadopago_account/movements/search` dan **403** a apps
 comunes; `/merchant_orders/{id}` y la API de órdenes de Mercado Libre también rechazan el token;
-Mercado Pago no manda mail por transferencias salientes. Las transferencias a otros bancos se
-resuelven con el flujo de pendientes + aprendizaje.
+Mercado Pago no manda mail por transferencias salientes; el reporte de "Retiros" (`bank_report`) fue dado de baja.
+La única fuente con el nombre del destinatario es el resumen de cuenta mensual.
+
+## Resumen de cuenta mensual (nombres de las transferencias)
+
+La API no dice **a quién** fue una transferencia. La web de Mercado Pago sí lo muestra, y el
+**Resumen de cuenta** mensual lo trae en un CSV. Se probó con agosto 2026: las 54 líneas cruzaron
+con la base por número de operación (el `REFERENCE_ID` del resumen es el mismo `SOURCE_ID` de la API).
+
+### Cómo descargarlo (una vez por mes, ~2 minutos)
+
+1. Desde la computadora, entrar a
+   [Mercado Pago → Reportes → Resumen de cuenta](https://www.mercadopago.com.ar/balance/reports/account_status).
+2. Tocar **Generar** al lado del mes disponible (o **Generar nuevo resumen** y elegir el período;
+   hasta 31 días). El mes se habilita cuando termina.
+3. En **Formato** elegir **.csv** (también hay .pdf y .xlsx, pero el importador lee el CSV) y confirmar con **Generar**.
+4. Esperar unos segundos a que deje de decir *"En preparación"*, abrir el resumen generado y tocar
+   **Abrir** en la fila `.csv`. Se descarga `account_statement-<id>.csv` en la carpeta Descargas.
+5. En la app, ir a **Importar** (menú de arriba) y subir el archivo.
+
+El Resumen avisa cuando un mes ya cerrado todavía no tiene su resumen importado.
+No hay forma oficial de automatizar la descarga: este reporte no está en la API, y el de "Retiros"
+(`/v1/account/bank_report`) fue dado de baja por Mercado Pago.
+
+### Qué trae y qué hace la app con eso
+
+```
+INITIAL_BALANCE;CREDITS;DEBITS;FINAL_BALANCE
+340.532,94;2.497.964,14;-2.497.191,57;341.305,51
+
+RELEASE_DATE;TRANSACTION_TYPE;REFERENCE_ID;TRANSACTION_NET_AMOUNT;PARTIAL_BALANCE
+09-08-2026;Transferencia enviada Pedro Perez;172059347587;-607.000,00;308.860,75
+18-08-2026;Pago Universidad Nacional Litoral;173512850375;-84.525,00;671.708,31
+03-08-2026;Rendimientos ;1747691410131;517,98;309.554,52
+```
+
+(ejemplo con nombres cambiados)
+
+- `src/lib/resumenCuenta.ts` saca el nombre de `TRANSACTION_TYPE` según el prefijo
+  (`Transferencia enviada`, `Transferencia recibida`, `Pago con QR`, `Pago`, `Inversión`) y lo guarda en
+  `Movimiento.contraparte` del movimiento con el mismo número de operación. No toca categorías ni notas.
+- Las listas y el chat muestran *"Transferencia a Pedro Perez"* en vez de *"Transferencia enviada"*.
+- **Aprende por nombre**: al categorizar una transferencia con nombre (ej. *"Pedro Perez = Vivienda"*), todas
+  las de esa persona se recategorizan, las pasadas y las futuras que se importen.
+- Cada importación queda registrada (tabla `Importacion`) y se lista en la página.
+- El CSV tiene datos personales: queda en Descargas, no se copia al proyecto ni se sube al repo.
 
 ## Chat con IA
 
@@ -128,6 +176,7 @@ El modelo en uso se muestra abajo del chat.
 | `/` Resumen | Selector de mes, ingresos (y lo que pasaste desde tu banco), gastos, balance, pendientes; gastos por categoría en barras; últimos movimientos |
 | `/movimientos` | Lista del mes con filtros por categoría y estado (la URL se puede compartir); cambiar la categoría de cualquier movimiento enseña una regla |
 | `/chat` | Pendientes con botones + asistente con IA |
+| `/importar` | Pasos para descargar el resumen de cuenta, botón para subirlo e historial de importaciones |
 
 Criterios del resumen:
 - **Gastos** incluye lo *sin categorizar* (transferencias pendientes): los totales son reales aunque falte revisar.
@@ -198,7 +247,7 @@ Sincronizar a mano: botón **Sincronizar** arriba a la derecha, o `POST http://l
 
 ```
 prisma/
-  schema.prisma          Modelos: Movimiento, Categoria, Regla, Sincronizacion
+  schema.prisma          Modelos: Movimiento, Categoria, Regla, Sincronizacion, Importacion
   migrations/
 src/
   instrumentation.ts     Arranca el programador cuando levanta el servidor
@@ -206,6 +255,7 @@ src/
     page.tsx             Resumen
     movimientos/         Lista con filtros
     chat/                Pendientes + asistente
+    importar/            Subir el resumen de cuenta mensual
     acciones.ts          Server actions: sincronizar, responder pendiente, cambiar categoría, detalle
     api/sync/route.ts    POST: sincroniza ahora
     api/chat/route.ts    POST: asistente (instrucciones + herramientas, respuesta en streaming)
@@ -220,6 +270,7 @@ src/
     consultas.ts         Lecturas para las páginas (resumen del mes, listas)
     pendientes.ts        Pendientes, detalle de un movimiento, parser de "café 2500"
     manual.ts            Alta de movimientos en efectivo
+    resumenCuenta.ts     Lee el CSV del resumen de cuenta y agrega el nombre de la otra parte
     descripcion.ts       Texto legible de un movimiento
     formato.ts           Pesos, fechas y meses en hora argentina
     ia/modelo.ts         Capa de modelo: elige proveedor y modelo por variables de entorno
@@ -231,24 +282,30 @@ Montos en **centavos** (`Int`), negativos = sale plata. Clave única de un movim
 
 ## Estado del proyecto
 
-Al **30/09/2026**:
+Al **30/09/2026** (tarde):
 
-- 194 movimientos de los últimos 90 días: **125 categorizados solos, 69 pendientes** (casi todos transferencias).
-- El chat con IA (Groq, `openai/gpt-oss-120b`) funciona: se probó con "¿cuánto gasté en transporte y qué es
-  el pago de 1192,99 que se repite?" y usó las herramientas bien (respuesta: $ 23.241,23; son peajes).
+- 194 movimientos de los últimos 90 días: **175 categorizados solos, 19 pendientes** (comercios nuevos y
+  transferencias recibidas). Las transferencias salientes van todas a "Transferencias".
+- El chat con IA (Groq, `openai/gpt-oss-120b`) funciona. Probado: "¿cuánto gasté en transporte y qué es el pago
+  de 1192,99?" ($ 23.241,23; son peajes) y "¿cuánto gasté en peaje en septiembre?" ($ 10.339,23). Ambos coinciden
+  con la base.
+- Importador del resumen de cuenta: hecho y compilando. Se validó el cruce con el CSV real de agosto (54/54),
+  **falta probar la subida desde la página** (requiere reiniciar `npm run dev` por el cambio de base).
 - Todavía **no se probó** desde la página contestar pendientes ni anotar efectivo con el asistente.
 
 Hecho:
 - [x] Conexión con Mercado Pago y reporte automático
 - [x] Base de datos, reglas de fábrica y aprendizaje
 - [x] Sincronización periódica
-- [x] Rubro del comercio y cuenta del otro lado (aprende "a quién" sin saber el nombre)
+- [x] Rubro del comercio (traducido al castellano) y cuenta del otro lado
 - [x] Panel web: resumen del mes, gastos por categoría, movimientos con filtros y cambio de categoría
 - [x] Chat: pendientes con botones y "Ver detalle"
 - [x] Asistente con IA y capa para cambiar de modelo sin tocar código
+- [x] Transferencias salientes en una sola categoría
+- [x] Importador del resumen de cuenta mensual (nombres de las transferencias) y aprendizaje por nombre
 
 Pendiente:
-- [ ] Probar el chat de punta a punta desde la página y ajustar las instrucciones del modelo
-- [ ] Decidir cómo categorizar las transferencias a otros bancos (siguen siempre visibles como "Sin categorizar")
+- [ ] **Rediseño visual** (al usuario no le convence cómo quedó; próximo paso)
+- [ ] Probar la importación y el chat de punta a punta desde la página
 - [ ] App instalable en el celular (PWA) con notificaciones
 - [ ] Login y despliegue en la nube (Postgres), con cuentas personales

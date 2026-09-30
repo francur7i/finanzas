@@ -7,6 +7,7 @@ const LINKS = [
   { href: "/", texto: "Resumen" },
   { href: "/movimientos", texto: "Movimientos" },
   { href: "/chat", texto: "Chat" },
+  { href: "/importar", texto: "Importar" },
 ];
 
 export function Navegacion({ pendientes }: { pendientes: number }) {

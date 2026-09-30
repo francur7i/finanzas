@@ -5,6 +5,7 @@ import { db } from "@/lib/db";
 import { confirmarCategoria } from "@/lib/categorizar";
 import { detalleMovimiento, listarPendientes } from "@/lib/pendientes";
 import { sincronizarMercadoPago } from "@/lib/sincronizar";
+import { importarResumen } from "@/lib/resumenCuenta";
 
 export async function sincronizarAhora() {
   const r = await sincronizarMercadoPago();
@@ -35,4 +36,29 @@ export async function pendientesActuales() {
 
 export async function verDetalle(movimientoId: number) {
   return detalleMovimiento(movimientoId);
+}
+
+export type ResultadoImportacion =
+  | { ok: true; filas: number; cruzadas: number; conNombre: number; recategorizados: number; sinCruzar: string[] }
+  | { ok: false; error: string };
+
+/** Sube el "Resumen de cuenta" (.csv) descargado de la web de Mercado Pago. */
+export async function importarResumenCuenta(_previo: ResultadoImportacion | null, datos: FormData): Promise<ResultadoImportacion> {
+  const archivo = datos.get("archivo");
+  if (!(archivo instanceof File) || archivo.size === 0) return { ok: false, error: "Elegí el archivo .csv del resumen." };
+  if (archivo.size > 1_000_000) return { ok: false, error: "El archivo es demasiado grande para ser un resumen mensual." };
+  try {
+    const r = await importarResumen(archivo.name, await archivo.text());
+    revalidatePath("/", "layout");
+    return {
+      ok: true,
+      filas: r.importacion.filas,
+      cruzadas: r.importacion.cruzadas,
+      conNombre: r.importacion.conNombre,
+      recategorizados: r.recategorizados,
+      sinCruzar: r.sinCruzar,
+    };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : "No se pudo leer el archivo." };
+  }
 }

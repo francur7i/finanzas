@@ -11,6 +11,7 @@ type Mov = {
   tipo: string;
   operacion: string | null;
   rubro: string | null;
+  contraparte: string | null;
   estado: string;
   categoriaId: number | null;
   categoria: { nombre: string; icono: string; tipo: string } | null;
