@@ -34,9 +34,10 @@ export default async function Importar() {
   const anteriores = await db.importacion.findMany({ orderBy: { creadaEn: "desc" }, take: 12 });
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="aparecer flex flex-col gap-6">
       <div>
-        <h1 className="text-lg font-semibold">Importar resumen de cuenta</h1>
+        <p className="text-sm font-medium text-tinta-3">Importar</p>
+        <h1 className="text-[34px] leading-tight font-bold tracking-tight">Resumen de cuenta</h1>
         <p className="mt-1 max-w-2xl text-sm text-tinta-2">
           La API de Mercado Pago no dice <em>a quién</em> le transferiste. El resumen de cuenta mensual sí: al importarlo, cada
           transferencia pasa a mostrar el nombre (&quot;Transferencia a …&quot;) y la app aprende por nombre. Se hace una vez por
@@ -44,8 +45,8 @@ export default async function Importar() {
         </p>
       </div>
 
-      <section className="rounded-xl border border-borde bg-superficie p-4">
-        <h2 className="mb-3 text-sm font-medium text-tinta-2">Cómo descargarlo</h2>
+      <section className="tarjeta p-6">
+        <h2 className="mb-3 text-[17px] font-semibold tracking-tight">Cómo descargarlo</h2>
         <ol className="list-decimal space-y-1.5 pl-5 text-sm">
           {PASOS.map((p, i) => (
             <li key={i}>{p}</li>
@@ -53,14 +54,14 @@ export default async function Importar() {
         </ol>
       </section>
 
-      <section className="rounded-xl border border-borde bg-superficie p-4">
-        <h2 className="mb-3 text-sm font-medium text-tinta-2">Subir el archivo</h2>
+      <section className="tarjeta p-6">
+        <h2 className="mb-3 text-[17px] font-semibold tracking-tight">Subir el archivo</h2>
         <SubirResumen />
       </section>
 
       {anteriores.length > 0 && (
-        <section className="rounded-xl border border-borde bg-superficie p-4">
-          <h2 className="mb-2 text-sm font-medium text-tinta-2">Importados</h2>
+        <section className="tarjeta p-6">
+          <h2 className="mb-2 text-[17px] font-semibold tracking-tight">Importados</h2>
           <ul className="divide-y divide-borde text-sm">
             {anteriores.map((i) => (
               <li key={i.id} className="flex flex-wrap justify-between gap-2 py-2">

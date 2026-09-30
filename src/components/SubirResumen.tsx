@@ -10,7 +10,7 @@ export function SubirResumen() {
   return (
     <div className="space-y-3">
       <form action={enviar} className="flex flex-wrap items-center gap-3">
-        <label className="cursor-pointer rounded-lg border border-dashed border-borde px-4 py-3 text-sm text-tinta-2 hover:border-acento hover:text-tinta">
+        <label className="cursor-pointer rounded-2xl border-2 border-dashed border-borde px-5 py-4 text-sm text-tinta-2 transition-colors hover:border-acento hover:text-acento">
           <input
             type="file"
             name="archivo"
@@ -22,19 +22,19 @@ export function SubirResumen() {
         </label>
         <button
           disabled={subiendo || !nombre}
-          className="rounded-lg bg-acento px-4 py-2 text-sm font-medium text-white disabled:opacity-50"
+          className="rounded-full bg-acento px-5 py-2.5 text-sm font-medium text-white transition-opacity hover:opacity-90 disabled:opacity-40"
         >
           {subiendo ? "Importando…" : "Importar"}
         </button>
       </form>
 
       {resultado?.ok === false && (
-        <p role="alert" className="rounded-lg bg-aviso-suave px-3 py-2 text-sm text-aviso">
+        <p role="alert" className="rounded-xl bg-aviso-suave px-4 py-3 text-sm text-aviso">
           {resultado.error}
         </p>
       )}
       {resultado?.ok && (
-        <div role="status" className="space-y-1 rounded-lg bg-grilla/60 px-3 py-2 text-sm">
+        <div role="status" className="space-y-1 rounded-xl bg-superficie-2 px-4 py-3 text-sm">
           <p>
             Listo: {resultado.cruzadas} de {resultado.filas} líneas coinciden con tus movimientos y{" "}
             <strong>{resultado.conNombre}</strong> ahora tienen el nombre de la otra parte.

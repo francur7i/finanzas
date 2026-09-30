@@ -119,9 +119,9 @@ export function Chat({
   }
 
   return (
-    <div className="flex h-[calc(100dvh-9rem)] flex-col gap-3">
+    <div className="aparecer flex h-[calc(100dvh-8.5rem)] flex-col gap-4">
       {/* Pendiente actual: se responde con un toque */}
-      <section className="rounded-xl border border-borde bg-superficie p-4" aria-label="Movimiento para revisar">
+      <section className="tarjeta p-5" aria-label="Movimiento para revisar">
         <div className="mb-2 flex items-center justify-between text-xs text-tinta-3">
           <span>
             Para revisar: <span className="cifras font-semibold text-aviso">{pendientes.length}</span>
@@ -136,7 +136,7 @@ export function Chat({
               {sugerida && <span className="text-tinta-2"> Se parece a uno que marcaste como {sugerida.nombre}.</span>}
             </p>
             {detalle?.id === actual.id && (
-              <ul className="list-disc space-y-0.5 rounded-lg bg-grilla/60 py-2 pr-2 pl-6 text-xs text-tinta-2">
+              <ul className="list-disc space-y-0.5 rounded-xl bg-superficie-2 py-2.5 pr-3 pl-7 text-xs text-tinta-2">
                 {detalle.lineas.map((l) => (
                   <li key={l}>{l}</li>
                 ))}
@@ -161,7 +161,7 @@ export function Chat({
                 value={nota}
                 onChange={(e) => setNota(e.target.value)}
                 placeholder="Nota opcional (ej. alquiler octubre)"
-                className="w-full max-w-64 rounded-lg border border-borde bg-plano px-2 py-1 text-xs"
+                className="w-full max-w-64 rounded-full bg-superficie-2 px-3 py-1.5 text-xs outline-none focus:ring-2 focus:ring-acento"
               />
               <button onClick={mostrarDetalle} disabled={guardando} className="text-xs text-acento hover:underline">
                 {detalle?.id === actual.id ? "Ocultar detalle" : "Ver detalle"}
@@ -179,7 +179,7 @@ export function Chat({
       </section>
 
       {/* Conversación con el asistente */}
-      <section className="flex min-h-0 flex-1 flex-col rounded-xl border border-borde bg-superficie" aria-label="Asistente">
+      <section className="flex min-h-0 flex-1 flex-col tarjeta" aria-label="Asistente">
         <div className="flex-1 space-y-3 overflow-y-auto p-4">
           <Burbuja de="bot">
             Preguntame lo que quieras de tus movimientos: &quot;¿qué es este pago?&quot;, &quot;¿cuánto gasté en comida?&quot;,
@@ -213,27 +213,30 @@ export function Chat({
 
           {status === "submitted" && <Burbuja de="bot">…</Burbuja>}
           {error && (
-            <p role="alert" className="rounded-lg bg-aviso-suave px-3 py-2 text-xs text-aviso">
+            <p role="alert" className="rounded-xl bg-aviso-suave px-3 py-2 text-xs text-aviso">
               No pude contestar: {error.message}
             </p>
           )}
           <div ref={fondo} />
         </div>
 
-        <form onSubmit={enviar} className="flex gap-2 border-t border-borde p-3">
+        <form onSubmit={enviar} className="flex items-center gap-2 border-t border-borde p-3">
           <input
             value={entrada}
             onChange={(e) => setEntrada(e.target.value)}
             placeholder={modelo.falta ? `Falta configurar ${modelo.falta} (ver README)` : "Escribí tu pregunta…"}
             disabled={!!modelo.falta}
-            className="flex-1 rounded-lg border border-borde bg-plano px-3 py-2 text-sm disabled:opacity-60"
+            className="flex-1 rounded-full bg-superficie-2 px-4 py-2.5 text-[15px] outline-none focus:ring-2 focus:ring-acento disabled:opacity-60"
             aria-label="Mensaje para el asistente"
           />
           <button
             disabled={pensando || !entrada.trim() || !!modelo.falta}
-            className="rounded-lg bg-acento px-4 text-sm font-medium text-white disabled:opacity-50"
+            aria-label="Enviar"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-acento text-white transition-all duration-200 hover:opacity-90 disabled:opacity-30"
           >
-            Enviar
+            <svg viewBox="0 0 20 20" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M10 16V4M4.5 9.5 10 4l5.5 5.5" />
+            </svg>
           </button>
         </form>
         <p className="px-3 pb-2 text-[10px] text-tinta-3">Modelo: {modelo.nombre}</p>
@@ -246,8 +249,8 @@ function Burbuja({ de, children }: { de: "bot" | "yo"; children: React.ReactNode
   return (
     <div className={`flex ${de === "yo" ? "justify-end" : "justify-start"}`}>
       <div
-        className={`max-w-[85%] whitespace-pre-wrap rounded-2xl px-3 py-2 text-sm ${
-          de === "yo" ? "rounded-br-sm bg-acento text-white" : "rounded-bl-sm bg-grilla text-tinta"
+        className={`max-w-[85%] whitespace-pre-wrap rounded-[20px] px-3.5 py-2 text-[15px] leading-snug ${
+          de === "yo" ? "rounded-br-md bg-acento text-white" : "rounded-bl-md bg-superficie-2 text-tinta"
         }`}
       >
         {children}
@@ -271,8 +274,8 @@ function Chip({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`rounded-full border px-3 py-1 text-xs transition-colors disabled:opacity-50 ${
-        destacado ? "border-acento bg-acento text-white" : "border-borde text-tinta-2 hover:border-acento hover:text-tinta"
+      className={`rounded-full px-3 py-1.5 text-[13px] transition-all duration-200 disabled:opacity-50 ${
+        destacado ? "bg-acento text-white shadow-suave" : "bg-superficie-2 text-tinta hover:bg-acento-suave hover:text-acento"
       }`}
     >
       {children}

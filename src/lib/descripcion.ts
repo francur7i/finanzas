@@ -37,7 +37,12 @@ export function descripcionVisible(m: ConDescripcion) {
   if (m.contraparte) {
     // El nombre del resumen de cuenta es más claro que lo que da la API ("UNL VIRTUAL", un UUID, "Varios").
     const esTransferencia = m.tipo === "PAYOUTS" || m.operacion === "money_transfer" || m.operacion === "account_fund";
-    if (!esTransferencia) return m.contraparte;
+    if (!esTransferencia) {
+      // "Peaje · Ausol": el rubro dice qué fue y el nombre dónde.
+      const rubro = rubroEnCastellano(m.rubro);
+      const nombre = m.contraparte.charAt(0).toUpperCase() + m.contraparte.slice(1).toLowerCase();
+      return rubro && rubro !== "Transporte" ? `${rubro} · ${nombre}` : m.contraparte;
+    }
     return m.montoCentavos < 0 ? `Transferencia a ${m.contraparte}` : `Transferencia de ${m.contraparte}`;
   }
   if (m.descripcion && m.descripcion !== "Varios") return m.descripcion;

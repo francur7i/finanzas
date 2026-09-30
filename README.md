@@ -178,6 +178,20 @@ El modelo en uso se muestra abajo del chat.
 | `/chat` | Pendientes con botones + asistente con IA |
 | `/importar` | Pasos para descargar el resumen de cuenta, botón para subirlo e historial de importaciones |
 
+### Diseño
+
+- Estética inspirada en Apple: fondo `#f5f5f7` (claro) o negro (oscuro), tarjetas con esquinas de 18px y
+  sombras suaves, barra superior translúcida con desenfoque, títulos grandes, burbujas tipo iMessage en el chat.
+- **Tema claro, oscuro o automático** con el control de la barra superior (se guarda en el navegador; un script
+  en `<head>` lo aplica antes de pintar, sin parpadeo).
+- Fuente: **SF Pro** en Mac/iPhone (fuente del sistema) e **Inter** en Windows/Android (SF Pro no se puede
+  distribuir; Inter es la alternativa más parecida).
+- Gráfico de **dona** con el total en el centro; al pasar el mouse por una porción o por la leyenda muestra esa
+  categoría. Cada categoría tiene **siempre el mismo color** (no depende del ranking). La paleta es la validada
+  por la guía de dataviz para daltonismo: los colores de sistema de Apple se probaron y no pasaban
+  (amarillo y celeste sin contraste en claro; verde y naranja confundibles).
+- Todos los colores son tokens por rol en `src/app/globals.css`, con valores propios para oscuro.
+
 Criterios del resumen:
 - **Gastos** incluye lo *sin categorizar* (transferencias pendientes): los totales son reales aunque falte revisar.
 - La categoría **Entre mis cuentas** (tipo `neutro`) no es ingreso ni gasto. El sueldo llega a otro banco y
@@ -304,8 +318,13 @@ Hecho:
 - [x] Transferencias salientes en una sola categoría
 - [x] Importador del resumen de cuenta mensual (nombres de las transferencias) y aprendizaje por nombre
 
+- [x] Rediseño visual estilo Apple, tema claro/oscuro/automático y gráfico de dona
+- [x] Importación del resumen de septiembre desde la página (probada por el usuario)
+
 Pendiente:
-- [ ] **Rediseño visual** (al usuario no le convence cómo quedó; próximo paso)
-- [ ] Probar la importación y el chat de punta a punta desde la página
+- [ ] Ideas para sumar valor (a elegir): presupuestos por categoría, comparación con meses anteriores, ajuste por
+      inflación (IPC), detector de suscripciones y aumentos, proyección de fin de mes, a quién se le transfiere más,
+      resumen mensual escrito por la IA, importar resúmenes de otros bancos y tarjetas
+- [ ] Probar el chat de punta a punta desde la página
 - [ ] App instalable en el celular (PWA) con notificaciones
 - [ ] Login y despliegue en la nube (Postgres), con cuentas personales

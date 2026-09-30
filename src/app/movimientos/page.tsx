@@ -20,11 +20,11 @@ export default async function Movimientos({ searchParams }: PageProps<"/movimien
   const entra = movimientos.filter((m) => m.montoCentavos > 0).reduce((s, m) => s + m.montoCentavos, 0);
   const sale = movimientos.filter((m) => m.montoCentavos < 0).reduce((s, m) => s - m.montoCentavos, 0);
   const extra = `${categoria ? `&categoria=${categoria}` : ""}${estado ? `&estado=${estado}` : ""}`;
-  const control = "rounded-lg border border-borde bg-superficie px-2 py-1.5 text-sm text-tinta-2";
+  const control = "rounded-full bg-superficie px-3.5 py-2 text-sm text-tinta shadow-suave outline-none focus:ring-2 focus:ring-acento";
 
   return (
-    <div className="flex flex-col gap-4">
-      <SelectorMes mes={mes} ruta="/movimientos" extra={extra} />
+    <div className="aparecer flex flex-col gap-5">
+      <SelectorMes mes={mes} ruta="/movimientos" extra={extra} subtitulo="Movimientos" />
 
       {/* Filtros: formulario GET, la URL queda compartible */}
       <form className="flex flex-wrap items-center gap-2" action="/movimientos">
@@ -44,14 +44,14 @@ export default async function Movimientos({ searchParams }: PageProps<"/movimien
           <option value="auto">Categorizados solos</option>
           <option value="confirmado">Confirmados por vos</option>
         </select>
-        <button className="rounded-lg bg-acento px-3 py-1.5 text-sm font-medium text-white">Filtrar</button>
+        <button className="rounded-full bg-acento px-4 py-2 text-sm font-medium text-white transition-opacity hover:opacity-90">Filtrar</button>
         <span className="cifras ml-auto text-xs text-tinta-3">
           {movimientos.length} movimientos · entró <span className="text-positivo">{pesos(entra)}</span> · salió{" "}
           {pesos(sale)}
         </span>
       </form>
 
-      <section className="rounded-xl border border-borde bg-superficie px-4 py-1">
+      <section className="tarjeta px-5 py-2">
         <ListaMovimientos
           movimientos={movimientos}
           accion={(m) => <SelectorCategoria movimientoId={m.id} actual={m.categoriaId} categorias={categorias} />}

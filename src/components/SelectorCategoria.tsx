@@ -30,7 +30,7 @@ export function SelectorCategoria({
         const id = Number(e.target.value);
         if (id) iniciar(() => cambiarCategoria(movimientoId, id));
       }}
-      className="hidden max-w-40 rounded-md border border-borde bg-superficie px-1.5 py-1 text-xs text-tinta-2 disabled:opacity-50 sm:block"
+      className="hidden max-w-40 rounded-full bg-superficie-2 px-2.5 py-1 text-xs text-tinta-2 outline-none disabled:opacity-50 sm:block"
     >
       <option value="" disabled>
         Elegir categoría…
