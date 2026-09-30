@@ -3,7 +3,8 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { confirmarCategoria } from "@/lib/categorizar";
 import { resumenMes } from "@/lib/consultas";
-import { descripcionVisible } from "@/lib/descripcion";
+import { descripcionVisible, rubroEnCastellano } from "@/lib/descripcion";
+import { textoNormalizado } from "@/lib/categorizar";
 import { mesActual, rangoMes, ZONA } from "@/lib/formato";
 import { crearMovimientoManual } from "@/lib/manual";
 import { detalleMovimiento } from "@/lib/pendientes";
@@ -16,7 +17,7 @@ function compacto(m: Movimiento & { categoria: Categoria | null }) {
     fecha: new Intl.DateTimeFormat("sv-SE", { timeZone: ZONA, dateStyle: "short", timeStyle: "short" }).format(m.fecha),
     monto: m.montoCentavos / 100,
     descripcion: descripcionVisible(m),
-    rubro: m.rubro,
+    rubro: rubroEnCastellano(m.rubro) ?? m.rubro,
     categoria: m.categoria?.nombre ?? null,
     estado: m.estado,
     tipo: m.tipo,
@@ -59,7 +60,10 @@ export const herramientas = {
       "Busca movimientos. Todos los filtros son opcionales y se combinan. Montos en pesos: negativos = salió plata, positivos = entró.",
     inputSchema: z.object({
       mes: mesSchema,
-      texto: z.string().optional().describe("Parte de la descripción, rubro o nota (ej. 'uber', 'peaje')."),
+      texto: z
+        .string()
+        .optional()
+        .describe("Palabra a buscar en descripción, rubro (en castellano), nota o categoría (ej. 'uber', 'peaje', 'netflix')."),
       categoria: z.string().optional().describe("Nombre de categoría, o 'sin' para los sin categorizar."),
       estado: z.enum(["pendiente", "auto", "confirmado"]).optional(),
       montoAproximado: z.number().optional().describe("Busca montos parecidos (±2 %) a este valor absoluto en pesos."),
@@ -68,31 +72,47 @@ export const herramientas = {
     execute: async ({ mes, texto, categoria, estado, montoAproximado, limite }) => {
       const { desde, hasta } = rangoMes(mes ?? mesActual());
       const cat = categoria && categoria !== "sin" ? await buscarCategoria(categoria) : null;
+      if (categoria && categoria !== "sin" && !cat) {
+        return {
+          error: `No existe la categoría "${categoria}". Probá buscar por texto, o usá una de: ${(await db.categoria.findMany()).map((c) => c.nombre).join(", ")}.`,
+        };
+      }
       const abs = montoAproximado ? Math.round(Math.abs(montoAproximado) * 100) : null;
       const filas = await db.movimiento.findMany({
         where: {
           fecha: { gte: desde, lt: hasta },
           ...(estado ? { estado } : {}),
           ...(categoria === "sin" ? { categoriaId: null } : cat ? { categoriaId: cat.id } : {}),
-          AND: [
-            texto
-              ? { OR: [{ descripcion: { contains: texto } }, { rubro: { contains: texto } }, { nota: { contains: texto } }] }
-              : {},
-            abs
-              ? {
-                  OR: [
-                    { montoCentavos: { gte: Math.round(abs * 0.98), lte: Math.round(abs * 1.02) } },
-                    { montoCentavos: { gte: -Math.round(abs * 1.02), lte: -Math.round(abs * 0.98) } },
-                  ],
-                }
-              : {},
-          ],
+          ...(abs
+            ? {
+                OR: [
+                  { montoCentavos: { gte: Math.round(abs * 0.98), lte: Math.round(abs * 1.02) } },
+                  { montoCentavos: { gte: -Math.round(abs * 1.02), lte: -Math.round(abs * 0.98) } },
+                ],
+              }
+            : {}),
         },
         include: { categoria: true },
         orderBy: { fecha: "desc" },
-        take: limite ?? 20,
       });
-      return { cantidad: filas.length, movimientos: filas.map(compacto) };
+
+      // El texto se busca en lo que ve el usuario (rubro traducido, categoría) y no solo en los campos crudos:
+      // "peaje" tiene que encontrar un rubro que Mercado Pago informa como "Transport - Tolls paygo".
+      const buscado = texto ? textoNormalizado(texto) : null;
+      const coinciden = buscado
+        ? filas.filter((m) =>
+            textoNormalizado(descripcionVisible(m), m.descripcion, m.rubro, rubroEnCastellano(m.rubro), m.nota, m.categoria?.nombre).includes(buscado),
+          )
+        : filas;
+
+      const suma = coinciden.reduce((s, m) => s + m.montoCentavos, 0);
+      return {
+        cantidad: coinciden.length,
+        // Total calculado acá para que el modelo no tenga que sumar.
+        totalEnPesos: suma / 100,
+        movimientos: coinciden.slice(0, limite ?? 20).map(compacto),
+        ...(coinciden.length > (limite ?? 20) ? { aviso: `Se muestran ${limite ?? 20} de ${coinciden.length}; el total incluye todos.` } : {}),
+      };
     },
   }),
 

@@ -7,11 +7,35 @@ type ConDescripcion = {
   rubro?: string | null;
 };
 
+// Mercado Pago informa el rubro en inglés ("Transport - Tolls paygo"). Del más específico al más general.
+const RUBROS: [RegExp, string][] = [
+  [/toll/i, "Peaje"],
+  [/parking/i, "Estacionamiento"],
+  [/fuel|gas station/i, "Combustible"],
+  [/taxi|ride/i, "Viaje"],
+  [/supermarket|grocer/i, "Supermercado"],
+  [/fast food/i, "Comida rápida"],
+  [/restaurant|food/i, "Restaurante"],
+  [/pharmac|drug/i, "Farmacia"],
+  [/health|medical/i, "Salud"],
+  [/utilit/i, "Servicios"],
+  [/telecom|internet|mobile/i, "Telefonía e internet"],
+  [/entertainment|games|streaming/i, "Entretenimiento"],
+  [/transport/i, "Transporte"],
+];
+
+/** Rubro en castellano, o null si no hay traducción conocida. */
+export function rubroEnCastellano(rubro: string | null | undefined) {
+  if (!rubro) return null;
+  return RUBROS.find(([patron]) => patron.test(rubro))?.[1] ?? null;
+}
+
 /** Texto a mostrar para un movimiento cuando la fuente no trae una descripción útil. */
 export function descripcionVisible(m: ConDescripcion) {
   if (m.nota) return m.nota;
   if (m.descripcion && m.descripcion !== "Varios") return m.descripcion;
-  if (m.rubro && /toll/i.test(m.rubro)) return "Peaje";
+  const rubro = rubroEnCastellano(m.rubro);
+  if (rubro) return rubro;
   if (m.tipo === "PAYOUTS") return "Transferencia enviada";
   if (m.operacion === "money_transfer") return m.montoCentavos < 0 ? "Transferencia a cuenta Mercado Pago" : "Transferencia recibida";
   if (m.operacion === "rendimiento") return "Rendimiento diario";

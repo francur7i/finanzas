@@ -1,3 +1,4 @@
+import { rubroEnCastellano } from "@/lib/descripcion";
 import { db } from "@/lib/db";
 
 // Forma serializable (sin Date) para pasarla a componentes de cliente.
@@ -82,7 +83,10 @@ export async function detalleMovimiento(id: number): Promise<string[]> {
   }).format(m.fecha);
   lineas.push(`Fue el ${cuando}.`);
   if (m.descripcion && !["Varios", "VAR"].includes(m.descripcion)) lineas.push(`Mercado Pago lo describe como "${m.descripcion}".`);
-  if (m.rubro) lineas.push(`Rubro del comercio: ${m.rubro}.`);
+  if (m.rubro) {
+    const rubro = rubroEnCastellano(m.rubro);
+    lineas.push(`Rubro del comercio: ${rubro ? `${rubro} (${m.rubro})` : m.rubro}.`);
+  }
   if (m.medio) lineas.push(`Se pagó con ${MEDIOS[m.medio] ?? m.medio}.`);
 
   if (m.destinatario) {
