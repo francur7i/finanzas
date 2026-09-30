@@ -11,7 +11,7 @@ const CATEGORIAS = [
   { nombre: "Vivienda", tipo: "gasto", color: "#b45309", icono: "🏠" },
   { nombre: "Salud", tipo: "gasto", color: "#dc2626", icono: "💊" },
   { nombre: "Ocio", tipo: "gasto", color: "#9333ea", icono: "🎉" },
-  { nombre: "Transferencias a terceros", tipo: "gasto", color: "#475569", icono: "↗" },
+  { nombre: "Transferencias", tipo: "gasto", color: "#475569", icono: "↗" },
   { nombre: "Otros gastos", tipo: "gasto", color: "#64748b", icono: "•" },
   { nombre: "Sueldo", tipo: "ingreso", color: "#059669", icono: "💼" },
   { nombre: "Rendimientos", tipo: "ingreso", color: "#10b981", icono: "📈" },
@@ -33,6 +33,10 @@ const REGLAS: ReglaSemilla[] = [
   { categoria: "Rendimientos", operacion: "rendimiento", signo: "entra" },
   { categoria: "Entre mis cuentas", operacion: "account_fund", signo: "entra" },
   { categoria: "Entre mis cuentas", operacion: "investment" },
+  // Transferencias salientes: una sola categoría, sin importar el banco de destino (decisión del usuario).
+  // Lo que el usuario aclare por chat (ej. "fue el alquiler") gana porque las reglas aprendidas tienen más prioridad.
+  { categoria: "Transferencias", tipo: "PAYOUTS", signo: "sale" },
+  { categoria: "Transferencias", operacion: "money_transfer", signo: "sale" },
   { categoria: "Devoluciones", tipo: "REFUND" },
   { categoria: "Devoluciones", tipo: "DISPUTE", signo: "entra" },
   { categoria: "Compras online", descripcionContiene: "mercado libre", signo: "sale" },
@@ -78,7 +82,15 @@ const REGLAS: ReglaSemilla[] = [
  * Agrega las categorías y reglas de fábrica que falten. Es idempotente: se puede correr en cada
  * sincronización, así una regla nueva agregada acá llega sola a una base que ya existe.
  */
+// Categorías que cambiaron de nombre: se renombran en la base en vez de crear una nueva.
+const RENOMBRADAS: Record<string, string> = { "Transferencias a terceros": "Transferencias" };
+
 export async function asegurarSemilla() {
+  for (const [viejo, nuevo] of Object.entries(RENOMBRADAS)) {
+    const yaExiste = await db.categoria.findUnique({ where: { nombre: nuevo } });
+    if (!yaExiste) await db.categoria.updateMany({ where: { nombre: viejo }, data: { nombre: nuevo } });
+  }
+
   const existentes = new Set((await db.categoria.findMany({ select: { nombre: true } })).map((c) => c.nombre));
   const faltantes = CATEGORIAS.filter((c) => !existentes.has(c.nombre));
   if (faltantes.length) await db.categoria.createMany({ data: faltantes.map((c) => ({ ...c })) });
