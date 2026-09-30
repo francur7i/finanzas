@@ -96,6 +96,7 @@ function datosDe(m: {
   rubro: string | null;
   destinatario: string | null;
   contraparte: string | null;
+  alias: string | null;
   crudo: string | null;
 }): DatosMovimiento {
   const f = m.crudo ? (JSON.parse(m.crudo) as Record<string, string>) : {};
@@ -105,7 +106,7 @@ function datosDe(m: {
     montoCentavos: m.montoCentavos,
     fecha: m.fecha,
     destinatario: m.destinatario,
-    texto: textoNormalizado(m.descripcion, m.contraparte, m.rubro, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
+    texto: textoNormalizado(m.alias, m.descripcion, m.contraparte, m.rubro, f.BUSINESS_UNIT, f.STORE_NAME, f.POS_NAME),
   };
 }
 

@@ -16,6 +16,8 @@ const ACCIONES: Record<string, [string, string]> = {
   detalleDeMovimiento: ["Mirando el detalle…", "Revisé el detalle"],
   listarCategorias: ["Mirando las categorías…", "Revisé las categorías"],
   categorizarMovimiento: ["Categorizando…", "Categoricé el movimiento"],
+  ponerApodo: ["Guardando el apodo…", "Guardé el apodo"],
+  quitarApodo: ["Borrando el apodo…", "Borré el apodo"],
   anotarMovimiento: ["Anotando…", "Anoté el movimiento"],
 };
 

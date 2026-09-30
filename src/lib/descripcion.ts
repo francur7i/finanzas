@@ -6,6 +6,7 @@ type ConDescripcion = {
   montoCentavos: number;
   rubro?: string | null;
   contraparte?: string | null;
+  alias?: string | null;
 };
 
 // Mercado Pago informa el rubro en inglés ("Transport - Tolls paygo"). Del más específico al más general.
@@ -34,6 +35,12 @@ export function rubroEnCastellano(rubro: string | null | undefined) {
 /** Texto a mostrar para un movimiento cuando la fuente no trae una descripción útil. */
 export function descripcionVisible(m: ConDescripcion) {
   if (m.nota) return m.nota;
+  if (m.alias) {
+    // El apodo que enseñó el usuario gana sobre cualquier nombre técnico.
+    const esTransferencia = m.tipo === "PAYOUTS" || m.operacion === "money_transfer";
+    if (!esTransferencia) return m.alias;
+    return m.montoCentavos < 0 ? `Transferencia a ${m.alias}` : `Transferencia de ${m.alias}`;
+  }
   if (m.contraparte) {
     // El nombre del resumen de cuenta es más claro que lo que da la API ("UNL VIRTUAL", un UUID, "Varios").
     const esTransferencia = m.tipo === "PAYOUTS" || m.operacion === "money_transfer" || m.operacion === "account_fund";

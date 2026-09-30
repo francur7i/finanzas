@@ -23,6 +23,7 @@ model Movimiento {
   rubro         String? // rubro del comercio según MP (ej. "Transport - Tolls paygo")
   destinatario  String? // id de la cuenta MP que recibió la plata: identifica a la misma persona o comercio
   contraparte   String? // nombre de la otra parte, sale del resumen de cuenta mensual (la API no lo da)
+  alias         String? // cómo lo llama el usuario (ej. "Uber" para EBANX); lo completa aplicarAlias()
   enriquecido   Boolean    @default(false) // ya se consultó el detalle del pago
   nota          String? // lo que escribe el usuario
   estado        String     @default("pendiente") // "pendiente" | "auto" | "confirmado"
@@ -69,6 +70,14 @@ model Regla {
   usos                Int          @default(0)
   movimientos         Movimiento[]
   creadaEn            DateTime     @default(now())
+}
+
+// Apodos que enseña el usuario por chat: todo movimiento cuyo texto contenga `patron` se muestra como `nombre`.
+model Alias {
+  id       Int      @id @default(autoincrement())
+  patron   String   @unique // normalizado: minúsculas, sin acentos
+  nombre   String
+  creadoEn DateTime @default(now())
 }
 
 // Resúmenes de cuenta importados a mano (CSV descargado de la web de Mercado Pago).

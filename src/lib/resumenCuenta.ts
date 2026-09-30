@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { recategorizar } from "@/lib/categorizar";
+import { aplicarAlias } from "@/lib/alias";
 
 // Importa el "Resumen de cuenta" en CSV que se descarga de la web de Mercado Pago
 // (Reportes → Resumen de cuenta). Es la única fuente con el NOMBRE de la otra parte de cada
@@ -81,6 +82,7 @@ export async function importarResumen(nombreArchivo: string, texto: string) {
   });
 
   // Con los nombres, las reglas aprendidas por nombre pueden resolver movimientos que ya estaban.
+  await aplicarAlias();
   const recategorizados = await recategorizar();
   return { importacion, sinCruzar, recategorizados };
 }

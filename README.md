@@ -146,6 +146,11 @@ RELEASE_DATE;TRANSACTION_TYPE;REFERENCE_ID;TRANSACTION_NET_AMOUNT;PARTIAL_BALANC
 | `listarCategorias` | Categorías disponibles |
 | `categorizarMovimiento` | "El de $50.000 fue el alquiler" → categoriza y aprende |
 | `anotarMovimiento` | "Café 2500" → anota un gasto en efectivo |
+| `ponerApodo` / `quitarApodo` | "EBANX es Uber" → todo lo que diga EBANX se ve como "Uber" (y las reglas lo usan) |
+
+**Apodos** (`src/lib/alias.ts`, tabla `Alias`): se guardan como texto a buscar → nombre a mostrar, y se
+aplican a todos los movimientos (viejos y nuevos) en cada sincronización e importación. Ojo con los
+procesadores de pago que cobran para varios comercios (EBANX también cobra AliExpress, Temu, etc.).
 
 El asistente sabe qué pendiente estás mirando, así que entiende "¿qué es este pago?".
 Las instrucciones del modelo están en `src/app/api/chat/route.ts`.
@@ -261,7 +266,7 @@ Sincronizar a mano: botón **Sincronizar** arriba a la derecha, o `POST http://l
 
 ```
 prisma/
-  schema.prisma          Modelos: Movimiento, Categoria, Regla, Sincronizacion, Importacion
+  schema.prisma          Modelos: Movimiento, Categoria, Regla, Sincronizacion, Importacion, Alias
   migrations/
 src/
   instrumentation.ts     Arranca el programador cuando levanta el servidor
@@ -283,6 +288,7 @@ src/
     programador.ts       Sincronización periódica
     consultas.ts         Lecturas para las páginas (resumen del mes, listas)
     pendientes.ts        Pendientes, detalle de un movimiento, parser de "café 2500"
+    alias.ts             Apodos enseñados por chat ("EBANX es Uber")
     manual.ts            Alta de movimientos en efectivo
     resumenCuenta.ts     Lee el CSV del resumen de cuenta y agrega el nombre de la otra parte
     descripcion.ts       Texto legible de un movimiento

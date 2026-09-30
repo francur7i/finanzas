@@ -26,7 +26,7 @@ export async function listarPendientes(): Promise<Pendiente[]> {
     tipo: m.tipo,
     operacion: m.operacion,
     descripcion: m.descripcion,
-    contraparte: m.contraparte,
+    contraparte: m.alias ?? m.contraparte,
     sugerida: m.categoria ? { id: m.categoria.id, nombre: m.categoria.nombre, icono: m.categoria.icono } : null,
   }));
 }
@@ -84,6 +84,7 @@ export async function detalleMovimiento(id: number): Promise<string[]> {
     minute: "2-digit",
   }).format(m.fecha);
   lineas.push(`Fue el ${cuando}.`);
+  if (m.alias) lineas.push(`Vos lo llamás "${m.alias}".`);
   if (m.contraparte) {
     lineas.push(`Según el resumen de cuenta, ${m.montoCentavos < 0 ? "fue a" : "vino de"} ${m.contraparte}.`);
   }

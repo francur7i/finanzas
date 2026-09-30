@@ -1,5 +1,6 @@
 import { db } from "@/lib/db";
 import { asegurarSemilla } from "@/lib/semilla";
+import { aplicarAlias } from "@/lib/alias";
 import { categorizar, recategorizar, reglasOrdenadas, textoNormalizado } from "@/lib/categorizar";
 import {
   asegurarConfiguracion,
@@ -46,6 +47,7 @@ export async function sincronizarMercadoPago(): Promise<ResultadoSync> {
     const filas = await descargarReporte(archivo);
     const nuevas = await guardarFilas(filas);
     await enriquecerFaltantes();
+    await aplicarAlias();
     await recategorizar();
 
     await db.sincronizacion.update({

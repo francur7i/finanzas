@@ -7,6 +7,7 @@ import { descripcionVisible, rubroEnCastellano } from "@/lib/descripcion";
 import { textoNormalizado } from "@/lib/categorizar";
 import { mesActual, rangoMes, ZONA } from "@/lib/formato";
 import { crearMovimientoManual } from "@/lib/manual";
+import { borrarAlias, crearAlias } from "@/lib/alias";
 import { detalleMovimiento } from "@/lib/pendientes";
 import type { Movimiento, Categoria } from "@/generated/prisma/client";
 
@@ -105,6 +106,7 @@ export const herramientas = {
               descripcionVisible(m),
               m.descripcion,
               m.contraparte,
+              m.alias,
               m.rubro,
               rubroEnCastellano(m.rubro),
               m.nota,
@@ -155,6 +157,29 @@ export const herramientas = {
       const despues = await db.movimiento.count({ where: { estado: "pendiente" } });
       return { ok: true, categoria: cat.nombre, resueltosParecidos: Math.max(0, antes - 1 - despues), pendientesRestantes: despues };
     },
+  }),
+
+  ponerApodo: tool({
+    description:
+      "Cuando el usuario dice que un nombre en realidad es otro (ej. 'EBANX es Uber', 'Marcela es mi vieja'): todos los movimientos cuyo texto contenga 'original' se muestran como 'apodo', y las reglas lo usan para categorizar.",
+    inputSchema: z.object({
+      original: z.string().describe("Texto tal como aparece en los movimientos (ej. 'EBANX')."),
+      apodo: z.string().describe("Cómo lo quiere ver el usuario (ej. 'Uber')."),
+    }),
+    execute: async ({ original, apodo }) => {
+      try {
+        const r = await crearAlias(original, apodo);
+        return { ok: true, movimientosActualizados: r.movimientos };
+      } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "No se pudo guardar el apodo" };
+      }
+    },
+  }),
+
+  quitarApodo: tool({
+    description: "Borra un apodo que el usuario había enseñado (por el texto original o por el apodo).",
+    inputSchema: z.object({ texto: z.string() }),
+    execute: async ({ texto }) => ({ borrados: await borrarAlias(texto) }),
   }),
 
   anotarMovimiento: tool({
