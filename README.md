@@ -186,9 +186,6 @@ El modelo en uso se muestra abajo del chat.
   en `<head>` lo aplica antes de pintar, sin parpadeo).
 - Fuente: **SF Pro** en Mac/iPhone (fuente del sistema) e **Inter** en Windows/Android (SF Pro no se puede
   distribuir; Inter es la alternativa más parecida).
-- **Ingresos, Gastos y Balance son pestañas**: la elegida muestra sus últimos meses en columnas (el mes que se ve
-  resaltado, valor solo en esa columna, tocar una columna lleva a ese mes). Balance es divergente: azul arriba del
-  cero, rojo abajo.
 - Gráfico de **dona** con el total en el centro; al pasar el mouse por una porción o por la leyenda muestra esa
   categoría. Cada categoría tiene **siempre el mismo color** (no depende del ranking). La paleta es la validada
   por la guía de dataviz para daltonismo: los colores de sistema de Apple se probaron y no pasaban
